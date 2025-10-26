@@ -186,7 +186,7 @@ async def deploy_start(ctx, deployment_id: str):
                         "Env": [f"{k}={v}" for k, v in env_vars_dict.items()],
                         "WorkingDir": "/app",
                         "Labels": labels,
-                        "NetworkingConfig": {"EndpointsConfig": {"devpush_runner": {}}},
+                        "NetworkingConfig": {"EndpointsConfig": {"devpush_runner": {}, "shared-db": {}}},
                         "HostConfig": {
                             **(
                                 {"CpuQuota": int(cpus * 100000), "CpuPeriod": 100000}

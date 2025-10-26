@@ -9,6 +9,12 @@
       "name": "PyPy (Python 3.11)"
     }
   ],
+  "Python with Node.js": [
+    {
+      "slug": "python-3.12-node-20",
+      "name": "Python 3.12 with Node.js 20"
+    }
+  ],
   "JavaScript": [
     {
       "slug": "node-20",

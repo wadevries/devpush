@@ -1,0 +1,53 @@
+############################
+# 1) Frontend build stage  #
+############################
+FROM node:20-alpine AS fe-build
+WORKDIR /fe
+COPY frontend/package*.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci
+COPY frontend/ ./
+# For Next.js (static export): set NEXT_PUBLIC_* env here if needed
+# For Vite/CRA: just build
+RUN npm run build
+
+# Assuming your build output goes to /fe/dist (Vite) or /fe/build (CRA)
+# Normalize it to /frontend_build so Django can see it predictably:
+RUN mkdir -p /out/frontend_build && \
+    if [ -d dist ]; then cp -r dist/* /out/frontend_build/; \
+    elif [ -d build ]; then cp -r build/* /out/frontend_build/; \
+    else echo "No dist/build folder found" && exit 1; fi
+
+FROM python:3.12-slim
+
+# Create non-root user
+RUN addgroup --system appgroup && adduser --system --group appuser
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        git \
+        build-essential \
+        python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Bring in the built frontend (renamed as /app/frontend_build)
+COPY --from=fe-build /out/frontend_build /app/var/dist
+
+WORKDIR /app
+
+# Set permissions
+RUN chown -R appuser:appgroup /app && \
+    mkdir -p /home/appuser/.local && \
+    chown -R appuser:appgroup /home/appuser
+
+# Switch to non-root user
+USER appuser
+
+# Set pip to install packages in user's home
+ENV PIP_USER=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PATH=/home/appuser/.local/bin:$PATH
+ENV HOME=/home/appuser
